@@ -1,65 +1,53 @@
 import { Injectable } from "@angular/core";
+import { Observable } from "rxjs";
+import { TodoStore } from "./state/todo.store";
 import { Todo } from "./todo.model";
+import { TodoQuery } from "./state/todo.query";
 
 @Injectable({
   providedIn: "root"
 })
 export class TodoService {
-  private _todos: Todo[] = [
-    {
-      id: "123",
-      title: "New task 1",
-      isCompleted: false
-    },
-    {
-      id: "124",
-      title: "New task 2",
-      isCompleted: false
-    },
-    {
-      id: "125",
-      title: "New task 3",
-      isCompleted: false
-    },
-    {
-      id: "126",
-      title: "New task 4",
-      isCompleted: false
-    }
-  ];
+  public todos: Todo[] = [];
 
-  constructor() {}
+  constructor(private todoStore: TodoStore, private todoQuery: TodoQuery) {}
 
-  public set todos(_todos: Todo[]) {
-    this._todos = _todos;
+  public get uncompletedTodos$(): Observable<Todo[]> {
+    return this.todoQuery.uncompletedTodos$;
   }
 
-  public get todos(): Todo[] {
-    return this._todos;
-  }
-
-  public get uncompletedTodos(): Todo[] {
-    return this.todos.filter(todo => !todo.isCompleted);
-  }
-
-  public get completedTodos(): Todo[] {
-    return this.todos.filter(todo => todo.isCompleted);
+  public get completedTodos$(): Observable<Todo[]> {
+    return this.todoQuery.completedTodos$;
   }
 
   public addTodo(title: string): void {
-    this.todos.push({ id: "1", title, isCompleted: false });
+    this.todoStore.update(state => {
+      const id = state.todos.length
+        ? `${parseInt(state.todos[state.todos.length - 1].id, 10) + 1}`
+        : "1";
+      return {
+        ...state,
+        todos: [...state.todos, { id, title, isCompleted: false }]
+      };
+    });
   }
 
   public removeTodo(id: string): void {
-    this.todos = this.todos.filter(todo => todo.id !== id);
+    this.todoStore.update(state => ({
+      ...state,
+      todos: state.todos.filter(todo => todo.id !== id)
+    }));
   }
 
   public setCompleted(id: string): void {
-    this.todos = this.todos.map(todo => {
-      if (todo.id === id) {
-        todo.isCompleted = true;
-      }
-      return todo;
-    });
+    this.todoStore.update(state => ({
+      ...state,
+      todos: state.todos.map(todo => {
+        if (todo.id === id) {
+          todo.isCompleted = true;
+        }
+        return todo;
+      })
+    }));
   }
 }
